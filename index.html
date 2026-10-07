@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Web Hole</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #0b0b0f; color: #eee; font: 16px system-ui, sans-serif; overflow: hidden; }
+  * { box-sizing: border-box; }
+
+  #menu { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 0 16px; text-align: center;
+          background: radial-gradient(circle at 50% 35%, #1a1a24, #0b0b0f 70%); }
+  #menu h1 { margin: 0; font-size: 76px; letter-spacing: -3px; font-weight: 800; }
+  #menu h1 .o { display: inline-block; width: .9em; height: .9em; border-radius: 50%; vertical-align: -.1em;
+                background: radial-gradient(circle at 42% 38%, #333, #000 70%); box-shadow: inset 0 0 14px #000, 0 0 24px #000a; }
+  form { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  input { width: min(80vw, 420px); padding: 13px 16px; font-size: 16px; border-radius: 12px; border: 1px solid #333; background: #16161d; color: #eee; outline: none; }
+  input:focus { border-color: #5b8cff; }
+  button { padding: 13px 22px; font-size: 16px; font-weight: 600; border: 0; border-radius: 12px; background: #5b8cff; color: #fff; cursor: pointer; transition: transform .08s, background .15s; }
+  button:hover { background: #6e9bff; }
+  button:active { transform: scale(.96); }
+  button:disabled { opacity: .5; cursor: wait; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+  .chip { padding: 6px 12px; font-size: 13px; background: #1c1c26; border: 1px solid #2a2a36; border-radius: 999px; color: #bcd; cursor: pointer; }
+  .chip:hover { border-color: #5b8cff; }
+  #msg { min-height: 1.4em; color: #f88; }
+
+  canvas { display: none; width: 100%; height: 100%; touch-action: none; }
+
+  #hud { position: fixed; top: 14px; left: 14px; right: 14px; display: none; gap: 10px; align-items: center; pointer-events: none; }
+  #hud .pill { background: #000a; backdrop-filter: blur(6px); border: 1px solid #ffffff18; border-radius: 12px; padding: 8px 14px; font-variant-numeric: tabular-nums; }
+  #score { font-size: 20px; font-weight: 700; }
+  #prog { flex: 1; height: 8px; background: #ffffff14; border-radius: 999px; overflow: hidden; }
+  #prog > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #5b8cff, #9b6bff); transition: width .2s; }
+  #back { pointer-events: auto; padding: 8px 14px; font-size: 14px; background: #000a; border: 1px solid #ffffff18; backdrop-filter: blur(6px); }
+  #back:hover { background: #000d; }
+
+  #load { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+          background: radial-gradient(circle at 50% 45%, #15151d, #0b0b0f 70%); z-index: 5; }
+  .swirl { position: relative; width: 120px; height: 120px; }
+  .swirl .ring { position: absolute; inset: 0; border-radius: 50%; border: 3px solid transparent; border-top-color: #5b8cff; animation: spin 1s linear infinite; }
+  .swirl .ring.b { inset: 16px; border-top-color: #9b6bff; animation-duration: .7s; animation-direction: reverse; }
+  .swirl .hole { position: absolute; inset: 34px; border-radius: 50%; background: radial-gradient(circle at 42% 38%, #333, #000 70%); box-shadow: inset 0 0 18px #000; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #load .txt { color: #9aa; }
+  #load .site { color: #cde; font-weight: 600; }
+
+  #best { display: flex; flex-direction: column; gap: 4px; width: min(80vw, 360px); }
+  #best:empty { display: none; }
+  #best .bt { color: #9aa; font-size: 13px; margin-bottom: 2px; }
+  #best .br { display: flex; justify-content: space-between; gap: 12px; padding: 7px 12px; background: #16161d; border: 1px solid #23232e; border-radius: 10px;
+              font-size: 14px; cursor: pointer; font-variant-numeric: tabular-nums; }
+  #best .br:hover { border-color: #5b8cff; }
+  #best .br span { color: #bcd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  #end { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 16px; z-index: 6;
+         background: #0b0b0fb0; backdrop-filter: blur(4px); animation: fade .5s; }
+  #end .card { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 32px 36px; max-width: 420px; width: 100%; text-align: center;
+               background: #13131a; border: 1px solid #ffffff18; border-radius: 20px; box-shadow: 0 20px 60px #000a; animation: pop .45s cubic-bezier(.2,1.4,.4,1); }
+  #end h2 { margin: 0; font-size: 28px; }
+  #endSite { color: #9ab; overflow-wrap: anywhere; }
+  #endScore { font-size: 48px; font-weight: 800; font-variant-numeric: tabular-nums;
+              background: linear-gradient(90deg, #5b8cff, #9b6bff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #endRec { color: #9aa; }
+  #endRec.rec { color: #ffd166; font-weight: 700; }
+  #endStats { color: #778; font-size: 14px; }
+  #end .row { display: flex; gap: 8px; margin-top: 8px; }
+  #end .ghost { background: #ffffff14; }
+  #end .ghost:hover { background: #ffffff24; }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes pop { from { transform: scale(.85); opacity: 0; } }
+</style>
+</head>
+<body>
+<div id="menu">
+  <h1>Web<span class="o"></span>Hole</h1>
+  <form>
+    <input id="url" placeholder="youtube.com" autofocus autocomplete="off" spellcheck="false">
+    <button id="go">Play</button>
+  </form>
+  <div class="chips" id="chips"></div>
+  <div id="msg"></div>
+  <div id="best"></div>
+</div>
+
+<div id="end">
+  <div class="card">
+    <h2>Site devoured!</h2>
+    <div id="endSite"></div>
+    <div id="endScore"></div>
+    <div id="endRec"></div>
+    <div id="endStats"></div>
+    <div class="row"><button id="again">↻ Play again</button><button id="home" class="ghost">⌂ Home</button></div>
+  </div>
+</div>
+
+<div id="load">
+  <div class="swirl"><div class="ring"></div><div class="ring b"></div><div class="hole"></div></div>
+  <div class="txt"><span class="site"></span> loading… <small>(Esc: cancel)</small></div>
+</div>
+
+<canvas></canvas>
+
+<div id="hud">
+  <div class="pill" id="score">0</div>
+  <div class="pill" style="flex:1;display:flex;align-items:center;gap:10px"><span id="count" style="font-size:13px;color:#9ab"></span><span id="prog"><i></i></span></div>
+  <button id="back">⌂ Home</button>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const cv = $('canvas'), ctx = cv.getContext('2d');
+
+// ---- tuning ----
+const START_R = 26, GROW = 0.084, GCAP = 0.55, SPEED = 0.20, SLOW = 0.56, ACC = 7, FALL = 0.55, FIT = 1.7, PULL = 1.45, VIEW0 = 340, VIEWK = 10, ZOOM_EASE = 2.5;
+// START_R radius · GROW area→growth · GCAP one eat adds ≤ GCAP× hole area · SPEED view-widths/s at start · SLOW bigger hole = slower (on screen ∝ (START_R/r)^SLOW)
+// ACC inertia (higher=snappier) · FALL sink s · FIT eat if √(w·h)<r·FIT · PULL suck ×r
+const TILE = 60, CRUMBLE = 6, SHAKE = 0.35, FLY = 1.1;
+// finale: when everything is eaten the page floor breaks into TILE px chunks; a crack wave spreads from the hole over CRUMBLE s, each chunk shakes SHAKE s then flies FLY s into the hole
+// camera: view width (page px) = VIEW0 + r·VIEWK → close at start, zooms out as the hole grows (until whole page fits) · ZOOM_EASE zoom smoothing /s
+
+const keys = {};
+let game = null, pointer = null, loading = null; // loading = AbortController of in-flight render
+addEventListener('keydown', e => { if (game && !game.over && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault(); keys[e.code] = true; });
+addEventListener('keyup', e => keys[e.code] = false);
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; pointer = null; });
+
+// mouse drag = steer toward cursor (PC). touch/pen = floating virtual joystick:
+// finger-down point is the stick base, drag offset sets direction + analog strength (full at JOY_R px)
+const JOY_R = 60, JOY_DEAD = 6;
+cv.addEventListener('pointerdown', e => {
+  if (pointer) return; // first finger owns the stick
+  pointer = { id: e.pointerId, x: e.clientX, y: e.clientY, ox: e.clientX, oy: e.clientY, joy: e.pointerType !== 'mouse' };
+  cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove', e => {
+  if (pointer?.id !== e.pointerId) return;
+  pointer.x = e.clientX; pointer.y = e.clientY; // base stays where the finger landed; knob clamps to the rim
+});
+const release = e => { if (pointer?.id === e.pointerId) pointer = null; };
+cv.addEventListener('pointerup', release);
+cv.addEventListener('pointercancel', release);
+
+const loadImg = (b64, type) => new Promise((ok, no) => {
+  if (!b64) return no(new Error('server sent no layers — is server.js outdated? Restart the server'));
+  const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('could not decode image')); i.src = `data:image/${type};base64,` + b64;
+});
+// LOD: mip chain [full, ½, ¼]. Zoomed out → draw from a smaller copy (faster + no shimmering from heavy downscale).
+async function mips(img, sc) {
+  const L = [{ img, sc }];
+  while (L.length < 3) {
+    const p = L[L.length - 1], w = Math.ceil(p.img.width / 2);
+    L.push({ img: await createImageBitmap(p.img, { resizeWidth: w, resizeHeight: Math.ceil(p.img.height / 2), resizeQuality: 'high' }), sc: p.sc * w / p.img.width });
+  }
+  return L;
+}
+
+// sample chips: 5 random picks from this pool, reshuffled on every visit to the menu
+const SAMPLES = [
+  'youtube.com', 'wikipedia.org', 'github.com', 'news.ycombinator.com', 'stackoverflow.com',
+  'reddit.com', 'amazon.com', 'apple.com', 'bbc.com', 'nytimes.com',
+  'imdb.com', 'twitch.tv', 'spotify.com', 'netflix.com', 'microsoft.com',
+  'google.com', 'duckduckgo.com', 'craigslist.org', 'archive.org', 'nasa.gov',
+  'mozilla.org', 'medium.com', 'theverge.com', 'ebay.com', 'etsy.com',
+];
+function renderChips() {
+  const pool = [...SAMPLES];
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [pool[i], pool[j]] = [pool[j], pool[i]]; } // Fisher–Yates
+  $('#chips').innerHTML = pool.slice(0, 5).map(s => `<span class="chip">${s}</span>`).join('');
+}
+renderChips();
+$('#chips').onclick = e => { if (e.target.classList.contains('chip')) { $('#url').value = e.target.textContent; $('#go').click(); } };
+
+$('form').onsubmit = async e => {
+  e.preventDefault();
+  const url = $('#url').value.trim();
+  if (!url) return;
+  $('#msg').textContent = '';
+  $('.site').textContent = url;
+  $('#menu').style.display = 'none';
+  $('#load').style.display = 'flex';
+  $('#go').disabled = true;
+  const ctl = loading = new AbortController();
+  try {
+    // ask for enough pixels that the zoomed-in start view is sharp on this screen (server caps it)
+    const rs = (innerWidth * (devicePixelRatio || 1) / (VIEW0 + START_R * VIEWK)).toFixed(2);
+    const r = await fetch(`/api/render?rs=${rs}&url=` + encodeURIComponent(url), { signal: ctl.signal, headers: { 'X-Hole': '1' } }); // server's CSRF guard
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    const sc = d.scale || 1;
+    const [obj, txt, bg] = await Promise.all([
+      loadImg(d.obj, 'webp').then(i => mips(i, sc)), loadImg(d.txt, 'webp').then(i => mips(i, sc)), loadImg(d.bg, 'jpeg').then(i => mips(i, sc))]);
+    ctl.signal.throwIfAborted();
+    $('#load').style.display = 'none';
+    start(d, { obj, txt, bg }, siteKey(url));
+  } catch (err) {
+    $('#load').style.display = 'none';
+    $('#menu').style.display = 'flex';
+    if (err.name !== 'AbortError') $('#msg').textContent = 'Error: ' + err.message;
+    $('#url').focus();
+  }
+  loading = null;
+  $('#go').disabled = false;
+};
+
+// ---- best scores: per site, in this browser's localStorage ----
+const BEST_KEY = 'webhole.best';
+const fmt = n => n.toLocaleString('en-US');
+// "HTTPS://GitHub.com/" → "github.com" (host lowercased, path kept: paths can be case-sensitive)
+const siteKey = u => {
+  const s = u.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, ''), i = s.indexOf('/');
+  return i < 0 ? s.toLowerCase() : s.slice(0, i).toLowerCase() + s.slice(i);
+};
+function loadBest() { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || {}; } catch { return {}; } }
+// returns the previous best for this site
+function saveBest(site, score) {
+  const b = loadBest(), prev = b[site] || 0;
+  if (score > prev) { b[site] = score; try { localStorage.setItem(BEST_KEY, JSON.stringify(b)); } catch {} }
+  return prev;
+}
+function renderBest() {
+  const top = Object.entries(loadBest()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const row = ([site, score]) => {
+    const r = document.createElement('div'), s = document.createElement('span'), v = document.createElement('b');
+    r.className = 'br'; r.title = 'Play again';
+    s.textContent = site; v.textContent = fmt(score);
+    r.append(s, v);
+    r.onclick = () => { $('#url').value = site; $('form').requestSubmit(); };
+    return r;
+  };
+  const head = Object.assign(document.createElement('div'), { className: 'bt', textContent: '🏆 Best scores' });
+  $('#best').replaceChildren(...(top.length ? [head, ...top.map(row)] : []));
+}
+renderBest();
+
+function goHome() {
+  if (!game) return;
+  saveBest(game.site, game.score); // quitting mid-game still counts
+  game = null;
+  cv.style.display = $('#hud').style.display = $('#end').style.display = 'none';
+  $('#menu').style.display = 'flex';
+  renderBest();
+  renderChips();
+  $('#url').select();
+}
+$('#back').onclick = $('#home').onclick = goHome;
+$('#again').onclick = () => { const s = game.site; goHome(); $('#url').value = s; $('form').requestSubmit(); };
+addEventListener('keydown', e => { if (e.key === 'Escape') { loading?.abort(); goHome(); } });
+
+function showEnd(g) {
+  g.over = true;
+  const prev = saveBest(g.site, g.score), rec = g.score > prev;
+  const t = Math.round(g.doneAt);
+  $('#endSite').textContent = g.site;
+  $('#endScore').textContent = fmt(g.score);
+  $('#endRec').textContent = rec ? (prev ? `New record! (previous ${fmt(prev)})` : 'First record!') : `Best: ${fmt(prev)}`;
+  $('#endRec').className = rec ? 'rec' : '';
+  $('#endStats').textContent = `${fmt(g.items.length)} objects · ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+  $('#end').style.display = 'flex';
+  $('#again').focus();
+}
+
+function start(d, layers, site) {
+  pointer = null; // a stick left over from the previous round would steer the new one
+  const items = d.items.map(i => ({ ...i, size: Math.sqrt(i.w * i.h), t: -1 }));
+  const g = game = {
+    site, W: d.width, H: d.height, ...layers, lv: 0, eaten: 0, score: 0, last: performance.now(),
+    time: 0, hole: { x: d.width / 2, y: Math.min(260, d.height / 2), r: START_R, tr: START_R, vx: 0, vy: 0 },
+    camW: VIEW0 + START_R * VIEWK,
+    items, bySize: [...items].sort((a, b) => a.size - b.size), mi: 0, // smallest-uneaten cursor
+  };
+  $('#menu').style.display = 'none';
+  cv.style.display = $('#hud').style.display = 'flex';
+  $('#url').blur();
+  requestAnimationFrame(function loop(now) {
+    if (game !== g) return;
+    step(g, Math.min(0.04, (now - g.last) / 1000));
+    g.last = now;
+    draw(g);
+    requestAnimationFrame(loop);
+  });
+}
+
+function step(g, dt) {
+  g.time += dt;
+  const h = g.hole;
+  let ax = !!(keys.KeyD || keys.ArrowRight) - !!(keys.KeyA || keys.ArrowLeft);
+  let ay = !!(keys.KeyS || keys.ArrowDown) - !!(keys.KeyW || keys.ArrowUp);
+  if (pointer?.joy) {                            // joystick: analog, magnitude 0..1
+    const dx = pointer.x - pointer.ox, dy = pointer.y - pointer.oy, dl = Math.hypot(dx, dy);
+    if (dl > JOY_DEAD) { const m = Math.min(1, dl / JOY_R); ax = dx / dl * m; ay = dy / dl * m; }
+  } else if (pointer && g.view) {                // mouse: steer toward dragged point
+    const s = g.view.s / (devicePixelRatio || 1); // view.s is per device px, pointer is CSS px
+    const wx = g.view.x + pointer.x / s, wy = g.view.y + pointer.y / s;
+    const dx = wx - h.x, dy = wy - h.y, dl = Math.hypot(dx, dy);
+    if (dl > 6) { ax = dx / dl; ay = dy / dl; }
+  }
+  // zoom target: grows with the hole, capped where the whole page fits the window
+  const tw = Math.min(Math.max(g.W, g.H * innerWidth / innerHeight), VIEW0 + h.r * VIEWK);
+  if (g.over) h.tr = 0;                          // end screen: hole collapses (smooth grow eases r → 0), camera holds
+  else g.camW += (tw - g.camW) * Math.min(1, dt * ZOOM_EASE);
+  // len: only normalize >1 (diagonal keys) → joystick half-push = half speed
+  const len = Math.max(1, Math.hypot(ax, ay)), spd = SPEED * g.camW * (START_R / h.r) ** SLOW; // in view widths → zoom-independent, heavier as it grows
+  // inertia: ease velocity toward target; release keys → glide to a stop
+  const k = Math.min(1, dt * ACC);
+  h.vx += (ax / len * spd - h.vx) * k;
+  h.vy += (ay / len * spd - h.vy) * k;
+  h.x = Math.max(0, Math.min(g.W, h.x + h.vx * dt));
+  h.y = Math.max(0, Math.min(g.H, h.y + h.vy * dt));
+  h.r += (h.tr - h.r) * Math.min(1, dt * 7);     // smooth grow
+
+  const r2 = h.r * h.r;
+  for (const it of g.items) {
+    if (it.t >= 0) { it.t += dt; continue; }
+    if (it.size > h.r * FIT) continue;            // too big for current hole
+    const cx = it.x + it.w / 2, cy = it.y + it.h / 2;
+    const d2 = (cx - h.x) * (cx - h.x) + (cy - h.y) * (cy - h.y);
+    if (d2 <= r2) {                               // center over the hole → eaten
+      it.t = 0; it.fx = cx; it.fy = cy; it.fa = Math.atan2(cy - h.y, cx - h.x);
+      g.eaten++; g.score += Math.round(it.w * it.h);
+      // clamp one eat's contribution so a big image can't make the hole balloon instantly
+      const add = Math.min(it.w * it.h, h.tr * h.tr * GCAP) * GROW;
+      h.tr = Math.sqrt(h.tr * h.tr + add);
+    }
+  }
+  // everything must be eatable: once nothing left fits, grow to the smallest leftover
+  while (g.mi < g.bySize.length && g.bySize[g.mi].t >= 0) g.mi++;
+  const next = g.bySize[g.mi];
+  if (next && next.size > h.tr * FIT) h.tr = next.size / FIT * 1.01;
+  if (!g.ground && g.eaten === g.items.length) { g.doneAt = g.time; g.ground = crumble(g); }
+}
+
+// split the floor into chunks; crack delay grows with distance from the hole (+ jitter so it looks broken, not swept)
+function crumble(g) {
+  const h = g.hole, tiles = [];
+  const far = Math.hypot(Math.max(h.x, g.W - h.x), Math.max(h.y, g.H - h.y)) || 1;
+  for (let y = 0; y < g.H; y += TILE) for (let x = 0; x < g.W; x += TILE) {
+    const w = Math.min(TILE, g.W - x), th = Math.min(TILE, g.H - y);
+    const d = Math.hypot(x + w / 2 - h.x, y + th / 2 - h.y);
+    tiles.push({ x, y, w, h: th, at: g.time + d / far * CRUMBLE + Math.random() * 0.6, spin: (Math.random() - 0.5) * 8 });
+  }
+  return tiles;
+}
+
+function draw(g) {
+  const h = g.hole, dpr = devicePixelRatio || 1;
+  const cw = Math.round(innerWidth * dpr), ch = Math.round(innerHeight * dpr);
+  if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; } // reassigning clears+reallocs → only on resize
+  // camera follows the hole; an axis smaller than the view gets centered
+  const viewW = g.camW, s = cw / viewW, viewH = ch / s;
+  const follow = (p, view, size) => size <= view ? (size - view) / 2 : Math.max(0, Math.min(size - view, p - view / 2));
+  const camX = follow(h.x, viewW, g.W), camY = follow(h.y, viewH, g.H);
+  g.view = { x: camX, y: camY, s };
+  // LOD: pick the mip whose texels ≈ screen pixels
+  g.lv = Math.max(0, Math.min(2, Math.floor(Math.log2(g.bg[0].sc / s))));
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.fillStyle = '#0b0b0f';
+  ctx.fillRect(0, 0, cw, ch);
+  ctx.setTransform(s, 0, 0, s, -camX * s, -camY * s);
+
+  // 1) page background (sprites removed). During the finale only the still-intact chunks:
+  //    one clip path of all their rects → a single seamless drawImage instead of per-tile seams
+  const bg = g.bg[g.lv];
+  if (g.ground) {
+    ctx.save(); ctx.beginPath();
+    for (const t of g.ground) if (g.time < t.at) ctx.rect(t.x, t.y, t.w, t.h);
+    ctx.clip(); ctx.drawImage(bg.img, 0, 0, g.W, g.H); ctx.restore();
+  } else ctx.drawImage(bg.img, 0, 0, g.W, g.H);
+
+  // 2) HOLE — drawn here so settled objects sit ON TOP (you see them over the pit)
+  const holeVis = h.r > 0.5;                     // collapsed at the end → draw nothing of it
+  if (holeVis) drawHole(ctx, h);
+
+  // 2b) finale chunks: shake loose, then accelerate into the hole, spinning and shrinking
+  let groundLeft = 0;
+  for (const t of g.ground || []) {
+    const age = g.time - t.at;
+    if (age < 0) { groundLeft++; continue; }
+    if (age > SHAKE + FLY) continue;
+    groundLeft++;
+    const cx = t.x + t.w / 2, cy = t.y + t.h / 2;
+    ctx.save();
+    if (age < SHAKE) {
+      const j = age / SHAKE * 2;
+      ctx.translate(cx + Math.sin(g.time * 70 + t.x) * j, cy + Math.cos(g.time * 60 + t.y) * j);
+    } else {
+      const k = (age - SHAKE) / FLY, e = k * k;
+      ctx.translate(cx + (h.x - cx) * e, cy + (h.y - cy) * e);
+      ctx.rotate(t.spin * e);
+      ctx.scale(1 - e * 0.9, 1 - e * 0.9);
+      ctx.globalAlpha = 1 - e * e;
+    }
+    ctx.drawImage(bg.img, t.x * bg.sc, t.y * bg.sc, t.w * bg.sc, t.h * bg.sc, -t.w / 2, -t.h / 2, t.w, t.h);
+    ctx.restore();
+  }
+
+  // 3) settled objects, with suck-funnel lean near the rim
+  const pr = h.r * PULL, L = camX - 40, R = camX + viewW + 40, T = camY - 40, B = camY + viewH + 40;
+  for (const it of g.items) {
+    if (it.t >= 0) continue;
+    if (it.x > R || it.x + it.w < L || it.y > B || it.y + it.h < T) continue;
+    const cx = it.x + it.w / 2, cy = it.y + it.h / 2;
+    const dist = Math.hypot(cx - h.x, cy - h.y);
+    if (dist < pr && it.size <= h.r * FIT) {       // funnel pull
+      const p = (pr - dist) / (pr - h.r * 0.3);
+      const k = Math.max(0, Math.min(1, p)) ** 1.5;
+      const nx = (h.x - cx) / (dist || 1), ny = (h.y - cy) / (dist || 1);
+      ctx.save();
+      ctx.translate(cx + nx * k * h.r * 0.5, cy + ny * k * h.r * 0.5);
+      ctx.rotate(k * 0.5 * (nx > 0 ? 1 : -1));
+      ctx.scale(1 - k * 0.35, 1 - k * 0.35);
+      ctx.globalAlpha = 1 - k * 0.1;
+      paint(g, it, -it.w / 2, -it.h / 2);
+      ctx.restore();
+    } else {
+      paint(g, it, it.x, it.y);
+    }
+  }
+
+  // 4) objects sinking into the pit — clipped inside the hole, spiralling to center
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(h.x, h.y, h.r, 0, 7);
+  ctx.clip();
+  for (const it of g.items) {
+    if (it.t < 0 || it.t > FALL) continue;
+    const k = it.t / FALL, e = k * k;              // accelerate inward
+    const ang = it.fa + k * 6, rad = (1 - e) * Math.hypot(it.fx - h.x, it.fy - h.y);
+    ctx.save();
+    ctx.globalAlpha = 1 - e;
+    ctx.translate(h.x + Math.cos(ang) * rad, h.y + Math.sin(ang) * rad);
+    ctx.rotate(k * 7);
+    ctx.scale(1 - e, 1 - e);
+    paint(g, it, -it.w / 2, -it.h / 2);
+    ctx.restore();
+  }
+  // dark center swallow so sprites vanish cleanly
+  const sw = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.r);
+  sw.addColorStop(0, '#000'); sw.addColorStop(0.5, '#0009'); sw.addColorStop(1, '#0000');
+  ctx.fillStyle = sw;
+  ctx.fillRect(h.x - h.r, h.y - h.r, h.r * 2, h.r * 2);
+  ctx.restore();
+
+  // 5) rim effect on top so the edge reads even when covered by objects
+  if (holeVis) drawFx(ctx, h, g.time);
+
+  // 6) joystick overlay (touch only), in screen space
+  if (pointer?.joy && !g.over) {
+    const dx = pointer.x - pointer.ox, dy = pointer.y - pointer.oy, dl = Math.hypot(dx, dy), m = Math.min(1, JOY_R / (dl || 1));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.beginPath(); ctx.arc(pointer.ox, pointer.oy, JOY_R, 0, 7);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.stroke();
+    ctx.beginPath(); ctx.arc(pointer.ox + dx * m, pointer.oy + dy * m, JOY_R * 0.42, 0, 7);
+    ctx.fillStyle = 'rgba(123,140,255,0.65)'; ctx.fill();
+  }
+
+  const total = g.items.length, done = g.eaten;
+  $('#score').textContent = g.score.toLocaleString('en-US');
+  $('#count').textContent = !g.ground ? done + '/' + total : groundLeft ? 'Floor collapsing…' : 'Site devoured!';
+  if (g.ground && !groundLeft && !g.over) showEnd(g);
+  $('#prog > i').style.width = (total ? done / total * 100 : 0) + '%';
+}
+
+// one item with its top-left at (x, y): glyph/image cut-out from its alpha layer, or a vector box
+function paint(g, it, x, y) {
+  if (it.k !== 'b') {
+    const L = (it.k === 't' ? g.txt : g.obj)[g.lv];
+    return ctx.drawImage(L.img, it.x * L.sc, it.y * L.sc, it.w * L.sc, it.h * L.sc, x, y, it.w, it.h);
+  }
+  const [t, r, b, l] = it.b, w = it.w, h = it.h;
+  if (it.bg) { ctx.fillStyle = it.bg; ctx.beginPath(); ctx.roundRect(x, y, w, h, it.rad); ctx.fill(); }
+  if (t && it.b.every(s => s && s[0] === t[0] && s[1] === t[1])) { // uniform border → rounded stroke
+    const i = t[0] / 2;
+    ctx.lineWidth = t[0]; ctx.strokeStyle = t[1];
+    ctx.beginPath(); ctx.roundRect(x + i, y + i, w - t[0], h - t[0], it.rad.map(v => Math.max(0, v - i))); ctx.stroke();
+  } else { // ponytail: mixed sides drawn square, radius ignored
+    if (t) { ctx.fillStyle = t[1]; ctx.fillRect(x, y, w, t[0]); }
+    if (b) { ctx.fillStyle = b[1]; ctx.fillRect(x, y + h - b[0], w, b[0]); }
+    if (l) { ctx.fillStyle = l[1]; ctx.fillRect(x, y, l[0], h); }
+    if (r) { ctx.fillStyle = r[1]; ctx.fillRect(x + w - r[0], y, r[0], h); }
+  }
+}
+
+function drawFx(ctx, h, t) {
+  const pulse = 0.5 + 0.5 * Math.sin(t * 2.5);
+  ctx.save();
+  // pulsing outer glow halo
+  ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, 7);
+  ctx.lineWidth = Math.max(2, h.r * 0.08);
+  ctx.shadowBlur = h.r * (0.5 + pulse * 0.5);
+  ctx.shadowColor = 'rgba(123,140,255,0.9)';
+  ctx.strokeStyle = `rgba(123,140,255,${0.25 + pulse * 0.25})`;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  // rotating accent arcs (3 segments) spinning around the rim
+  const rr = h.r * 1.04;
+  ctx.lineWidth = Math.max(2, h.r * 0.07);
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const a = t * 1.6 + i * (Math.PI * 2 / 3);
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, rr, a, a + 0.8);
+    ctx.strokeStyle = i % 2 ? 'rgba(155,107,255,0.85)' : 'rgba(91,140,255,0.85)';
+    ctx.stroke();
+  }
+  // crisp inner rim
+  ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, 7);
+  ctx.lineWidth = Math.max(1, h.r * 0.03);
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawHole(ctx, h) {
+  ctx.save();
+  // soft outer shadow on the ground (radial gradient, not ctx.filter blur — filter is a per-frame perf killer)
+  const sh = ctx.createRadialGradient(h.x, h.y, h.r * 0.9, h.x, h.y, h.r * 1.22);
+  sh.addColorStop(0, 'rgba(0,0,0,0.30)');
+  sh.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = sh;
+  ctx.fillRect(h.x - h.r * 1.3, h.y - h.r * 1.3, h.r * 2.6, h.r * 2.6);
+  // the pit
+  ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, 7);
+  const g = ctx.createRadialGradient(h.x, h.y, h.r * 0.2, h.x, h.y, h.r);
+  g.addColorStop(0, '#000');
+  g.addColorStop(0.7, '#050507');
+  g.addColorStop(1, '#17171d');
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.restore();
+}
+</script>
+</body>
+</html>

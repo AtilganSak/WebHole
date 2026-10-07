@@ -1,0 +1,11 @@
+{
+  "name": "web-hole",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node security-test.js"
+  },
+  "dependencies": {
+    "puppeteer": "^25.12.0"
+  }
+}

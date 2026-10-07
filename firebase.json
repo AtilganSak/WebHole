@@ -1,0 +1,7 @@
+{
+  "hosting": {
+    "site": "web-hole",
+    "public": "hosting",
+    "rewrites": [{ "source": "**", "run": { "serviceId": "webhole", "region": "us-central1" } }]
+  }
+}
